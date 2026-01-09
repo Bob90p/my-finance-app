@@ -1,55 +1,61 @@
 import streamlit as st
 import yfinance as yf
 import google.generativeai as genai
-from PIL import Image
-import matplotlib.pyplot as plt
 
-# إعداد الصفحة
-st.set_page_config(page_title="المحلل المالي الذكي", layout="wide")
+# 1. إعداد الصفحة والمفتاح
+st.set_page_config(page_title="المحلل المالي النصي", layout="wide")
 
-# الربط بالمفتاح وتنظيفه
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"].strip()
     genai.configure(api_key=api_key)
-    # استخدام نسخة مستقرة لتجنب خطأ 404
+    # استخدام موديل فلاش السريع
     model = genai.GenerativeModel('gemini-1.5-flash')
 else:
-    st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Secrets")
+    st.error("⚠️ يرجى ضبط المفتاح في Secrets")
     st.stop()
 
-st.title("المحلل الاستراتيجي 🤖📈")
+st.title("المحلل المالي الذكي (نسخة تحليل البيانات) 🤖📊")
 
-ticker = st.text_input("أدخل رمز السهم (مثال: CASE أو AAPL):", "CASE")
+ticker = st.text_input("أدخل رمز السهم (مثل CASE أو AAPL):", "CASE")
 
-if st.button("🚀 الحصول على التوصية"):
+if st.button("🚀 تحليل السهم الآن"):
     try:
-        with st.spinner("جاري التحليل..."):
-            # جلب بيانات 5 أيام فقط لسرعة الرفع
+        with st.spinner("جاري جلب وتحليل البيانات الرقمية..."):
+            # جلب بيانات شهر كامل لتحليل الاتجاه
             stock = yf.Ticker(ticker)
-            df = stock.history(period="5d")
+            df = stock.history(period="1mo")
             
             if not df.empty:
-                # عرض السعر
-                st.metric(f"سعر {ticker}", f"{df['Close'].iloc[-1]:.2f}")
+                # تحضير البيانات الرقمية لتحويلها لنص يفهمه الذكاء الاصطناعي
+                last_price = df['Close'].iloc[-1]
+                high_price = df['High'].max()
+                low_price = df['Low'].min()
+                change = ((last_price - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
                 
-                # الرسم البياني
-                fig, ax = plt.subplots(figsize=(8, 4))
-                df['Close'].plot(ax=ax, color='blue')
-                st.pyplot(fig)
+                # عرض السعر الحالي في الواجهة
+                st.metric(f"السعر الحالي ({ticker})", f"{last_price:.2f}", f"{change:.2f}%")
                 
-                # حفظ وإرسال الصورة
-                image_path = "chart.png"
-                fig.savefig(image_path, dpi=70)
-                img = Image.open(image_path)
+                # صياغة الطلب النصي فقط (بدون صور)
+                prompt = f"""
+                بصفتك محلل مالي، حلل أداء سهم {ticker} بناءً على البيانات التالية لشهر مضى:
+                - السعر الحالي: {last_price:.2f}
+                - أعلى سعر وصل له: {high_price:.2f}
+                - أدنى سعر وصل له: {low_price:.2f}
+                - نسبة التغير الإجمالية: {change:.2f}%
                 
-                prompt = f"حلل سهم {ticker} بناءً على الصورة وأعطِ توصية (شراء/بيع/انتظار) بالعربية."
+                أعطني توصية (شراء، بيع، أو احتفاظ) مع ذكر الأهداف المتوقعة ووقف الخسارة باللغة العربية.
+                """
                 
-                # إرسال الطلب (هنا يحدث التحليل)
-                response = model.generate_content([prompt, img])
+                # إرسال الطلب النصي
+                response = model.generate_content(prompt)
                 
                 st.markdown("---")
+                st.subheader("📋 التوصية الفنية (بناءً على البيانات الرقمية):")
                 st.success(response.text)
             else:
-                st.error("الرمز غير صحيح.")
+                st.error("❌ لم يتم العثور على بيانات لهذا الرمز.")
+                
     except Exception as e:
-        st.error(f"حدث خطأ تقني: {e}")
+        # [span_0](start_span)السجلات أظهرت أخطاء في الـ header، لذا نظهر رسالة واضحة للمستخدم[span_0](end_span)
+        st.error(f"حدث خطأ في الاتصال: {e}")
+        st.info("تأكد من صحة مفتاح API في الإعدادات.")
