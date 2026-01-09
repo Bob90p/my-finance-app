@@ -2,60 +2,34 @@ import streamlit as st
 import yfinance as yf
 import google.generativeai as genai
 
-# 1. إعداد الصفحة والمفتاح
-st.set_page_config(page_title="المحلل المالي النصي", layout="wide")
+st.set_page_config(page_title="المحلل السريع")
 
+# تنظيف وجلب المفتاح
 if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"].strip()
-    genai.configure(api_key=api_key)
-    # استخدام موديل فلاش السريع
+    # [span_2](start_span)السجلات أظهرت رموزاً غير صالحة، هذا السطر سيحذفها[span_2](end_span)
+    raw_key = st.secrets["GEMINI_API_KEY"]
+    clean_key = raw_key.replace('"', '').replace("'", "").strip()
+    genai.configure(api_key=clean_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
 else:
-    st.error("⚠️ يرجى ضبط المفتاح في Secrets")
+    st.error("المفتاح غير موجود في Secrets")
     st.stop()
 
-st.title("المحلل المالي الذكي (نسخة تحليل البيانات) 🤖📊")
+st.title("المحلل المالي الذكي 🤖")
+ticker = st.text_input("رمز السهم:", "CASE")
 
-ticker = st.text_input("أدخل رمز السهم (مثل CASE أو AAPL):", "CASE")
-
-if st.button("🚀 تحليل السهم الآن"):
+if st.button("تحليل"):
     try:
-        with st.spinner("جاري جلب وتحليل البيانات الرقمية..."):
-            # جلب بيانات شهر كامل لتحليل الاتجاه
-            stock = yf.Ticker(ticker)
-            df = stock.history(period="1mo")
+        # جلب السعر الحالي فقط لسرعة الاستجابة
+        stock = yf.Ticker(ticker)
+        price = stock.history(period="1d")['Close'].iloc[-1]
+        
+        st.metric("السعر الحالي", f"{price:.2f}")
+        
+        with st.spinner("ذكاء اصطناعي يفكر..."):
+            # طلب نصي قصير جداً
+            res = model.generate_content(f"سعر سهم {ticker} هو {price:.2f}. أعطني نصيحة سريعة بالعربية.")
+            st.success(res.text)
             
-            if not df.empty:
-                # تحضير البيانات الرقمية لتحويلها لنص يفهمه الذكاء الاصطناعي
-                last_price = df['Close'].iloc[-1]
-                high_price = df['High'].max()
-                low_price = df['Low'].min()
-                change = ((last_price - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
-                
-                # عرض السعر الحالي في الواجهة
-                st.metric(f"السعر الحالي ({ticker})", f"{last_price:.2f}", f"{change:.2f}%")
-                
-                # صياغة الطلب النصي فقط (بدون صور)
-                prompt = f"""
-                بصفتك محلل مالي، حلل أداء سهم {ticker} بناءً على البيانات التالية لشهر مضى:
-                - السعر الحالي: {last_price:.2f}
-                - أعلى سعر وصل له: {high_price:.2f}
-                - أدنى سعر وصل له: {low_price:.2f}
-                - نسبة التغير الإجمالية: {change:.2f}%
-                
-                أعطني توصية (شراء، بيع، أو احتفاظ) مع ذكر الأهداف المتوقعة ووقف الخسارة باللغة العربية.
-                """
-                
-                # إرسال الطلب النصي
-                response = model.generate_content(prompt)
-                
-                st.markdown("---")
-                st.subheader("📋 التوصية الفنية (بناءً على البيانات الرقمية):")
-                st.success(response.text)
-            else:
-                st.error("❌ لم يتم العثور على بيانات لهذا الرمز.")
-                
     except Exception as e:
-        # [span_0](start_span)السجلات أظهرت أخطاء في الـ header، لذا نظهر رسالة واضحة للمستخدم[span_0](end_span)
-        st.error(f"حدث خطأ في الاتصال: {e}")
-        st.info("تأكد من صحة مفتاح API في الإعدادات.")
+        st.error(f"خطأ: {e}")
