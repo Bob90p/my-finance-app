@@ -3,7 +3,7 @@ import yfinance as yf
 import google.generativeai as genai
 
 # ضع مفتاحك هنا (تأكد من بقاء علامات التنصيص)
-genai.configure(api_key="ضع_مفتاحك_هنا")
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel('gemini-pro')
 
 st.set_page_config(page_title="المحلل الاستراتيجي", layout="wide")
