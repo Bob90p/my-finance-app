@@ -33,8 +33,13 @@ if st.button("🚀 الحصول على التوصية"):
             # تعليمات التوصية التلقائية
             instruction = f"حلل هذا السهم {ticker} وأعطِ توصية واضحة (شراء/بيع/انتظار) مع تحديد الأهداف ووقف الخسارة باللغة العربية."
             img = Image.open("chart.png")
-            response = model.generate_content([instruction, img, context])
+                        # إرسال الصورة والتعليمات لـ Gemini
+            response = model.generate_content([instruction, img]) # حذفنا context من هنا لتبسيط الطلب
             
+            st.markdown("---")
+            st.subheader("📋 التوصية:")
+            st.info(response.text) # استخدمنا st.info ليكون شكل التوصية أوضح
+
             st.subheader("📋 التوصية:")
             st.write(response.text)
     except Exception as e:
